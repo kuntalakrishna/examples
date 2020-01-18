@@ -7,9 +7,70 @@ provider:
   runtime: python2.7 # or python3.7, supported as of November 2018
 
 functions:
-  currentTime:
+  xss:
     handler: handler.endpoint
     events:
       - http:
-          path: ping
+          path: xss
           method: get
+    role: xssLambdaRole
+
+resources:
+  Resources:
+    ##### XSS Lambda : START #####
+    xssLambdaRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName:
+          Fn::Join:
+          - '-'
+          -
+            - ${self:service}
+            - ${opt:stage}
+            - !Ref AWS::Region
+            - xssLambdaRole
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: 
+              Fn::Join:
+              - '-'
+              -
+                - ${opt:stage}
+                - ${self:service}
+                - !Ref AWS::Region
+                - xssLambdaPolicy
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - logs:CreateLogGroup
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                  Resource:
+                    - Fn::Join:
+                      - ':'
+                      -
+                        - arn:aws:logs
+                        - !Ref AWS::Region
+                        - !Ref AWS::AccountId
+                        - log-group:/aws/lambda/*:*:*
+                - Effect: Allow
+                  Action:
+                    - sns:Publish
+                  Resource:
+                    Fn::Join:
+                    - ':'
+                    -
+                      - arn:aws:sns
+                      - !Ref AWS::Region
+                      - !Ref AWS::AccountId
+                      - sns_slack_alerts
+    ##### XSS Lambda : END #####
